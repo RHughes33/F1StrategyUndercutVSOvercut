@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>F1 Pit Strategy Report — 2011–2017</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<style>
+  :root{
+    --bg:#0E1220;
+    --surface:#161B29;
+    --surface-alt:#1D2333;
+    --line:#2A3040;
+    --text:#EDEFF3;
+    --muted:#8891A6;
+    --undercut:#E10600;
+    --overcut:#FFB100;
+    --inline:#5B6472;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{padding-bottom:80px;}
+  a{color:var(--overcut);}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px;}
+
+  /* Hero */
+  .hero{
+    border-bottom:1px solid var(--line);
+    padding:56px 0 40px;
+    background:
+      radial-gradient(600px 300px at 85% -10%, rgba(255,177,0,0.10), transparent 60%),
+      radial-gradient(500px 260px at 10% -20%, rgba(225,6,0,0.10), transparent 60%);
+  }
+  .eyebrow{
+    color:var(--muted);
+    font-size:13px;
+    letter-spacing:0.02em;
+    margin:0 0 14px;
+    font-family:var(--mono);
+  }
+  h1{
+    font-size:clamp(28px,4.2vw,46px);
+    line-height:1.08;
+    margin:0 0 16px;
+    font-weight:800;
+    letter-spacing:-0.01em;
+    max-width:16ch;
+  }
+  .hero p.lede{
+    color:var(--muted);
+    font-size:17px;
+    line-height:1.6;
+    max-width:62ch;
+    margin:0 0 36px;
+  }
+
+  .kpi-row{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+    border-radius:10px;
+    overflow:hidden;
+  }
+  .kpi{
+    background:var(--surface);
+    padding:22px 24px;
+  }
+  .kpi .num{
+    font-family:var(--mono);
+    font-size:32px;
+    font-weight:600;
+    line-height:1;
+  }
+  .kpi .num.neg{color:var(--undercut);}
+  .kpi .num.pos{color:var(--overcut);}
+  .kpi .label{
+    color:var(--muted);
+    font-size:13px;
+    margin-top:8px;
+    line-height:1.4;
+  }
+
+  /* Sections */
+  section{padding:52px 0;border-bottom:1px solid var(--line);}
+  section:last-of-type{border-bottom:none;}
+  .section-head{margin-bottom:26px;max-width:70ch;}
+  .section-head h2{font-size:22px;margin:0 0 8px;font-weight:700;}
+  .section-head p{color:var(--muted);font-size:15px;line-height:1.6;margin:0;}
+
+  .grid-2{display:grid;grid-template-columns:1.1fr 1fr;gap:24px;}
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:20px;
+  }
+  .card h3{margin:0 0 4px;font-size:15px;font-weight:600;}
+  .card .sub{color:var(--muted);font-size:12.5px;margin-bottom:6px;}
+
+  .callout{
+    background:var(--surface-alt);
+    border-left:3px solid var(--overcut);
+    border-radius:6px;
+    padding:16px 18px;
+    font-size:14.5px;
+    line-height:1.6;
+    color:var(--text);
+    margin-top:20px;
+  }
+  .callout b{color:var(--overcut);}
+
+  .legend-row{display:flex;gap:18px;margin-top:14px;flex-wrap:wrap;}
+  .legend-item{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+
+  footer{padding:48px 0 0;color:var(--muted);font-size:13.5px;line-height:1.7;}
+  footer h4{color:var(--text);font-size:14px;margin:0 0 10px;}
+  footer .links{margin-top:18px;display:flex;gap:20px;flex-wrap:wrap;}
+  footer .links a{font-family:var(--mono);font-size:13px;}
+
+  @media (max-width:820px){
+    .kpi-row{grid-template-columns:1fr;}
+    .grid-2{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <p class="eyebrow">F1 race strategy · 2011–2017 · Ergast dataset</p>
+    <h1>Does the undercut actually work?</h1>
+    <p class="lede">Analysis of 2,790 pit stops across seven seasons, classifying each driver's first stop as an undercut, overcut, or inline call relative to the field — then measuring what actually happened to their finishing position.</p>
+
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="num neg" id="kpi-undercut">–</div>
+        <div class="label">Avg. positions gained per undercut attempt (all 742 attempts, unweighted)</div>
+      </div>
+      <div class="kpi">
+        <div class="num" id="kpi-total" style="color:var(--text)">–</div>
+        <div class="label">Total classified pit stops analysed, 2011–2017</div>
+      </div>
+      <div class="kpi">
+        <div class="num pos" id="kpi-overcut">–</div>
+        <div class="label">Avg. positions gained per overcut attempt — outperformed the undercut every single season</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <section>
+    <div class="section-head">
+      <h2>The headline surprise</h2>
+      <p>The undercut is F1's most talked-about strategy call — but across the full unfiltered dataset, it shows a small net loss on average. The overcut (staying out longer) consistently outperformed it, in every season from 2011 to 2017.</p>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Strategy type distribution</h3>
+        <div class="sub">Share of all 2,790 classified pit stops</div>
+        <div id="donut" style="height:300px;"></div>
+      </div>
+      <div class="card">
+        <h3>Avg. positions gained by season</h3>
+        <div class="sub">Overcut (amber) vs. undercut (red) vs. inline (grey)</div>
+        <div id="trend" style="height:300px;"></div>
+      </div>
+    </div>
+    <div class="callout">
+      <b>Why this isn't the full story:</b> a raw average across every stop treats a driver pitting from P1 the same as one pitting from P18 — very different amounts of "room" to gain or lose. The breakdown below, by constructor, shows why context matters more than the headline number.
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Undercut value by constructor</h2>
+      <p>Limited to constructors with at least 15 undercut attempts. Marussia and Caterham top the list — both backmarker teams that spent most races lapped, pitting into clean air with little midfield traffic to defend against, rather than showing superior strategy calling. Mercedes' large negative average reflects the opposite effect: starting near the front leaves far more room to lose positions than gain them.</p>
+    </div>
+    <div class="card">
+      <div id="constructor-bar" style="height:460px;"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Undercut value by circuit</h2>
+      <p>Limited to circuits with at least 10 undercut attempts. Circuits where overtaking is genuinely difficult on track — Albert Park, Monza, Barcelona — show the biggest undercut payoff, since track position won in the pits is harder to lose back on lap time alone.</p>
+    </div>
+    <div class="card">
+      <div id="circuit-bar" style="height:560px;"></div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap" style="padding:0;">
+      <h4>Methodology</h4>
+      <p>Each driver's first pit stop per race (2011–2017 seasons only, the earliest years with complete pit stop timing in this dataset) was classified as an <b style="color:var(--text)">undercut</b>, <b style="color:var(--text)">overcut</b>, or <b style="color:var(--text)">inline</b> call by comparing its lap number to that race's median first-stop lap across the field (±2 laps as the threshold). Positions gained/lost is grid position minus classified finishing position. This is a simplification of "expected strategy" — it doesn't account for safety car periods, which can distort pit windows independent of a team's strategic skill.</p>
+      <div class="links">
+        <a href="#">Kaggle notebook →</a>
+        <a href="#">GitHub repo →</a>
+      </div>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+const data = {"donut": {"inline": 1223, "overcut": 825, "undercut": 742}, "kpi_avg_undercut": -0.46, "kpi_total_stops": 2790, "trend": [{"year": 2011, "strategy_type": "inline", "positions_gained": -0.3263157894736842}, {"year": 2011, "strategy_type": "overcut", "positions_gained": 1.937007874015748}, {"year": 2011, "strategy_type": "undercut", "positions_gained": 0.125}, {"year": 2012, "strategy_type": "inline", "positions_gained": 0.48292682926829267}, {"year": 2012, "strategy_type": "overcut", "positions_gained": 2.239130434782609}, {"year": 2012, "strategy_type": "undercut", "positions_gained": -0.7980769230769231}, {"year": 2013, "strategy_type": "inline", "positions_gained": 0.4}, {"year": 2013, "strategy_type": "overcut", "positions_gained": 0.7368421052631579}, {"year": 2013, "strategy_type": "undercut", "positions_gained": -0.205607476635514}, {"year": 2014, "strategy_type": "inline", "positions_gained": 0.2356020942408377}, {"year": 2014, "strategy_type": "overcut", "positions_gained": 1.6428571428571428}, {"year": 2014, "strategy_type": "undercut", "positions_gained": -0.39325842696629215}, {"year": 2015, "strategy_type": "inline", "positions_gained": 0.3333333333333333}, {"year": 2015, "strategy_type": "overcut", "positions_gained": 1.4220183486238531}, {"year": 2015, "strategy_type": "undercut", "positions_gained": -0.42452830188679247}, {"year": 2016, "strategy_type": "inline", "positions_gained": 0.5714285714285714}, {"year": 2016, "strategy_type": "overcut", "positions_gained": 2.1925925925925926}, {"year": 2016, "strategy_type": "undercut", "positions_gained": -1.4649122807017543}, {"year": 2017, "strategy_type": "inline", "positions_gained": 0.951048951048951}, {"year": 2017, "strategy_type": "overcut", "positions_gained": 1.9519230769230769}, {"year": 2017, "strategy_type": "undercut", "positions_gained": -0.01818181818181818}], "leaderboard": [{"constructor": "Marussia", "strategy_type": "undercut", "avg_positions_gained": 2.2857142857142856, "stops": 21}, {"constructor": "Caterham", "strategy_type": "undercut", "avg_positions_gained": 1.5416666666666667, "stops": 24}, {"constructor": "Sauber", "strategy_type": "undercut", "avg_positions_gained": 0.3052631578947368, "stops": 95}, {"constructor": "McLaren", "strategy_type": "undercut", "avg_positions_gained": 0.03125, "stops": 64}, {"constructor": "Force India", "strategy_type": "undercut", "avg_positions_gained": -0.0641025641025641, "stops": 78}, {"constructor": "Haas F1 Team", "strategy_type": "undercut", "avg_positions_gained": -0.2727272727272727, "stops": 22}, {"constructor": "Lotus F1", "strategy_type": "undercut", "avg_positions_gained": -0.4444444444444444, "stops": 45}, {"constructor": "Williams", "strategy_type": "undercut", "avg_positions_gained": -0.759493670886076, "stops": 79}, {"constructor": "Red Bull", "strategy_type": "undercut", "avg_positions_gained": -0.8311688311688312, "stops": 77}, {"constructor": "Renault", "strategy_type": "undercut", "avg_positions_gained": -0.8484848484848485, "stops": 33}, {"constructor": "Ferrari", "strategy_type": "undercut", "avg_positions_gained": -0.9375, "stops": 48}, {"constructor": "Toro Rosso", "strategy_type": "undercut", "avg_positions_gained": -1.575, "stops": 80}, {"constructor": "Mercedes", "strategy_type": "undercut", "avg_positions_gained": -3.306122448979592, "stops": 49}], "circuits": [{"circuit": "Albert Park Grand Prix Circuit", "avg_positions_gained": 1.837837837837838, "stops": 37}, {"circuit": "Autodromo Nazionale di Monza", "avg_positions_gained": 1.148936170212766, "stops": 47}, {"circuit": "Circuit de Barcelona-Catalunya", "avg_positions_gained": 1.1333333333333333, "stops": 30}, {"circuit": "Valencia Street Circuit", "avg_positions_gained": 0.75, "stops": 12}, {"circuit": "N\u00fcrburgring", "avg_positions_gained": 0.6470588235294118, "stops": 17}, {"circuit": "Marina Bay Street Circuit", "avg_positions_gained": 0.4444444444444444, "stops": 27}, {"circuit": "Baku City Circuit", "avg_positions_gained": 0.25, "stops": 12}, {"circuit": "Sochi Autodrom", "avg_positions_gained": 0.1, "stops": 30}, {"circuit": "Circuit Gilles Villeneuve", "avg_positions_gained": 0.0212765957446808, "stops": 47}, {"circuit": "Aut\u00f3dromo Jos\u00e9 Carlos Pace", "avg_positions_gained": -0.0833333333333333, "stops": 36}, {"circuit": "Sepang International Circuit", "avg_positions_gained": -0.25, "stops": 28}, {"circuit": "Hungaroring", "avg_positions_gained": -0.2727272727272727, "stops": 33}, {"circuit": "Korean International Circuit", "avg_positions_gained": -0.4615384615384615, "stops": 13}, {"circuit": "Yas Marina Circuit", "avg_positions_gained": -0.5526315789473685, "stops": 38}, {"circuit": "Shanghai International Circuit", "avg_positions_gained": -0.6551724137931034, "stops": 29}, {"circuit": "Buddh International Circuit", "avg_positions_gained": -0.85, "stops": 20}, {"circuit": "Suzuka Circuit", "avg_positions_gained": -0.8571428571428571, "stops": 35}, {"circuit": "Aut\u00cc_dromo Hermanos Rodr\u00cc_guez", "avg_positions_gained": -1.28, "stops": 25}, {"circuit": "Red Bull Ring", "avg_positions_gained": -1.3076923076923077, "stops": 26}, {"circuit": "Silverstone Circuit", "avg_positions_gained": -1.4827586206896552, "stops": 29}, {"circuit": "Circuit de Monaco", "avg_positions_gained": -1.5510204081632653, "stops": 49}, {"circuit": "Circuit of the Americas", "avg_positions_gained": -1.606060606060606, "stops": 33}, {"circuit": "Circuit de Spa-Francorchamps", "avg_positions_gained": -1.8611111111111112, "stops": 36}, {"circuit": "Hockenheimring", "avg_positions_gained": -2.176470588235294, "stops": 17}, {"circuit": "Bahrain International Circuit", "avg_positions_gained": -2.333333333333333, "stops": 33}], "mix": [{"constructor": "Caterham", "strategy_type": "inline", "count": 52}, {"constructor": "Caterham", "strategy_type": "overcut", "count": 23}, {"constructor": "Caterham", "strategy_type": "undercut", "count": 24}, {"constructor": "Ferrari", "strategy_type": "inline", "count": 145}, {"constructor": "Ferrari", "strategy_type": "overcut", "count": 63}, {"constructor": "Ferrari", "strategy_type": "undercut", "count": 48}, {"constructor": "Force India", "strategy_type": "inline", "count": 115}, {"constructor": "Force India", "strategy_type": "overcut", "count": 64}, {"constructor": "Force India", "strategy_type": "undercut", "count": 78}, {"constructor": "HRT", "strategy_type": "inline", "count": 24}, {"constructor": "HRT", "strategy_type": "overcut", "count": 35}, {"constructor": "HRT", "strategy_type": "undercut", "count": 8}, {"constructor": "Haas F1 Team", "strategy_type": "inline", "count": 34}, {"constructor": "Haas F1 Team", "strategy_type": "overcut", "count": 17}, {"constructor": "Haas F1 Team", "strategy_type": "undercut", "count": 22}, {"constructor": "Lotus", "strategy_type": "inline", "count": 16}, {"constructor": "Lotus", "strategy_type": "overcut", "count": 14}, {"constructor": "Lotus", "strategy_type": "undercut", "count": 6}, {"constructor": "Lotus F1", "strategy_type": "inline", "count": 52}, {"constructor": "Lotus F1", "strategy_type": "overcut", "count": 36}, {"constructor": "Lotus F1", "strategy_type": "undercut", "count": 45}, {"constructor": "Manor Marussia", "strategy_type": "inline", "count": 23}, {"constructor": "Manor Marussia", "strategy_type": "overcut", "count": 40}, {"constructor": "Manor Marussia", "strategy_type": "undercut", "count": 9}, {"constructor": "Marussia", "strategy_type": "inline", "count": 42}, {"constructor": "Marussia", "strategy_type": "overcut", "count": 41}, {"constructor": "Marussia", "strategy_type": "undercut", "count": 21}, {"constructor": "McLaren", "strategy_type": "inline", "count": 125}, {"constructor": "McLaren", "strategy_type": "overcut", "count": 67}, {"constructor": "McLaren", "strategy_type": "undercut", "count": 64}, {"constructor": "Mercedes", "strategy_type": "inline", "count": 123}, {"constructor": "Mercedes", "strategy_type": "overcut", "count": 93}, {"constructor": "Mercedes", "strategy_type": "undercut", "count": 49}, {"constructor": "Red Bull", "strategy_type": "inline", "count": 112}, {"constructor": "Red Bull", "strategy_type": "overcut", "count": 68}, {"constructor": "Red Bull", "strategy_type": "undercut", "count": 77}, {"constructor": "Renault", "strategy_type": "inline", "count": 41}, {"constructor": "Renault", "strategy_type": "overcut", "count": 34}, {"constructor": "Renault", "strategy_type": "undercut", "count": 33}, {"constructor": "Sauber", "strategy_type": "inline", "count": 83}, {"constructor": "Sauber", "strategy_type": "overcut", "count": 79}, {"constructor": "Sauber", "strategy_type": "undercut", "count": 95}, {"constructor": "Toro Rosso", "strategy_type": "inline", "count": 109}, {"constructor": "Toro Rosso", "strategy_type": "overcut", "count": 68}, {"constructor": "Toro Rosso", "strategy_type": "undercut", "count": 80}, {"constructor": "Virgin", "strategy_type": "inline", "count": 7}, {"constructor": "Virgin", "strategy_type": "overcut", "count": 23}, {"constructor": "Virgin", "strategy_type": "undercut", "count": 4}, {"constructor": "Williams", "strategy_type": "inline", "count": 120}, {"constructor": "Williams", "strategy_type": "overcut", "count": 60}, {"constructor": "Williams", "strategy_type": "undercut", "count": 79}]};
+
+const colors = {
+  undercut: '#E10600',
+  overcut: '#FFB100',
+  inline: '#5B6472'
+};
+
+const plotlyBase = {
+  paper_bgcolor: 'rgba(0,0,0,0)',
+  plot_bgcolor: 'rgba(0,0,0,0)',
+  font: { color: '#EDEFF3', family: '-apple-system, Helvetica, Arial, sans-serif', size: 12 },
+  margin: { l: 10, r: 10, t: 10, b: 30 }
+};
+const config = { displayModeBar: false, responsive: true };
+
+// KPIs
+const undercutAvg = data.kpi_avg_undercut;
+document.getElementById('kpi-undercut').textContent = (undercutAvg >= 0 ? '+' : '') + undercutAvg.toFixed(2);
+document.getElementById('kpi-total').textContent = data.kpi_total_stops.toLocaleString();
+
+const overcutRows = data.trend.filter(d => d.strategy_type === 'overcut');
+const overcutAvgAll = overcutRows.reduce((s,d)=>s+d.positions_gained,0) / overcutRows.length;
+document.getElementById('kpi-overcut').textContent = '+' + overcutAvgAll.toFixed(2);
+
+// Donut
+Plotly.newPlot('donut', [{
+  type: 'pie',
+  hole: 0.62,
+  labels: Object.keys(data.donut),
+  values: Object.values(data.donut),
+  marker: { colors: Object.keys(data.donut).map(k => colors[k]), line: { color: '#0E1220', width: 2 } },
+  textfont: { color: '#EDEFF3', size: 12 },
+  sort: false
+}], {
+  ...plotlyBase,
+  showlegend: true,
+  legend: { orientation: 'h', y: -0.1, font: { size: 11, color: '#8891A6' } },
+  margin: { l: 10, r: 10, t: 10, b: 10 }
+}, config);
+
+// Trend line
+const years = [...new Set(data.trend.map(d => d.year))].sort();
+const seriesFor = t => years.map(y => (data.trend.find(d => d.year === y && d.strategy_type === t) || {}).positions_gained);
+
+Plotly.newPlot('trend', [
+  { x: years, y: seriesFor('overcut'), type: 'scatter', mode: 'lines+markers', name: 'Overcut', line: { color: colors.overcut, width: 2.5 }, marker: { size: 6 } },
+  { x: years, y: seriesFor('undercut'), type: 'scatter', mode: 'lines+markers', name: 'Undercut', line: { color: colors.undercut, width: 2.5 }, marker: { size: 6 } },
+  { x: years, y: seriesFor('inline'), type: 'scatter', mode: 'lines+markers', name: 'Inline', line: { color: colors.inline, width: 2, dash: 'dot' }, marker: { size: 5 } }
+], {
+  ...plotlyBase,
+  showlegend: true,
+  legend: { orientation: 'h', y: -0.18, font: { size: 11, color: '#8891A6' } },
+  xaxis: { gridcolor: '#2A3040', tickfont: { color: '#8891A6' }, dtick: 1 },
+  yaxis: { gridcolor: '#2A3040', tickfont: { color: '#8891A6' }, zerolinecolor: '#3A4155', title: { text: 'Avg. positions gained', font: { size: 11, color: '#8891A6' } } },
+  margin: { l: 45, r: 10, t: 10, b: 40 }
+}, config);
+
+// Constructor bar
+const lb = [...data.leaderboard].sort((a,b) => a.avg_positions_gained - b.avg_positions_gained);
+Plotly.newPlot('constructor-bar', [{
+  type: 'bar',
+  orientation: 'h',
+  x: lb.map(d => d.avg_positions_gained),
+  y: lb.map(d => d.constructor),
+  marker: { color: lb.map(d => d.avg_positions_gained >= 0 ? colors.overcut : colors.undercut) },
+  text: lb.map(d => (d.avg_positions_gained >= 0 ? '+' : '') + d.avg_positions_gained.toFixed(2)),
+  textposition: 'outside',
+  textfont: { color: '#8891A6', size: 11 }
+}], {
+  ...plotlyBase,
+  xaxis: { gridcolor: '#2A3040', tickfont: { color: '#8891A6' }, zerolinecolor: '#3A4155', title: { text: 'Avg. positions gained on undercut', font: { size: 11, color: '#8891A6' } } },
+  yaxis: { tickfont: { color: '#EDEFF3', size: 12 } },
+  margin: { l: 110, r: 40, t: 10, b: 40 }
+}, config);
+
+// Circuit bar
+const cb = [...data.circuits].sort((a,b) => a.avg_positions_gained - b.avg_positions_gained);
+Plotly.newPlot('circuit-bar', [{
+  type: 'bar',
+  orientation: 'h',
+  x: cb.map(d => d.avg_positions_gained),
+  y: cb.map(d => d.circuit),
+  marker: { color: cb.map(d => d.avg_positions_gained >= 0 ? colors.overcut : colors.undercut) },
+  text: cb.map(d => (d.avg_positions_gained >= 0 ? '+' : '') + d.avg_positions_gained.toFixed(2)),
+  textposition: 'outside',
+  textfont: { color: '#8891A6', size: 10 }
+}], {
+  ...plotlyBase,
+  xaxis: { gridcolor: '#2A3040', tickfont: { color: '#8891A6' }, zerolinecolor: '#3A4155', title: { text: 'Avg. positions gained on undercut', font: { size: 11, color: '#8891A6' } } },
+  yaxis: { tickfont: { color: '#EDEFF3', size: 11 } },
+  margin: { l: 220, r: 50, t: 10, b: 40 }
+}, config);
+</script>
+
+</body>
+</html>
